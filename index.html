@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конструктор Календаря</title>
+    <style>
+        * {
+            color: #001f3f;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+            background-color: #fff8dc;
+        }
+        .calendar-container {
+            background-color: #fff8dc;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: fit-content;
+        }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .day {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border: 1px solid #ccc;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+        }
+        .date-number {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 18px;
+            z-index: 1;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .prev-month {
+            color: #999999 !important;
+        }
+        .next-month {
+            color: #999999 !important;
+        }
+        .weekend {
+            color: #ff0000 !important;
+        }
+        .weekend-other-month {
+            color: #ff9999 !important;
+        }
+        .header {
+            font-size: 28px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .weekday {
+            width: 150px;
+            height: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .weekday.weekend {
+            color: #ff0000 !important;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+        .settings {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .settings label {
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .settings select {
+            margin-top: 5px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: white;
+        }
+        button {
+            background-color: #001f3f;
+            color: white !important;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #003366;
+        }
+        input[type="file"] {
+            color: #001f3f;
+        }
+        .quality-info {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+            max-width: 500px;
+            text-align: center;
+        }
+        .low-quality-list {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+            max-width: 500px;
+            display: none;
+        }
+        .low-quality-list ul {
+            margin: 5px 0;
+            padding-left: 20px;
+            text-align: left;
+        }
+        .replace-btn {
+            background-color: #dc3545;
+            padding: 4px 8px;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+        .replace-btn:hover {
+            background-color: #c82333;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+        /* Сохранение пропорций изображений */
+        .day img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        
+        /* Стили для печати */
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+            }
+            .calendar-container {
+                box-shadow: none;
+                padding: 10px;
+                margin: 0 auto;
+                width: 100% !important;
+                max-width: none;
+                transform: scale(1.4);
+                transform-origin: top center;
+            }
+            .calendar {
+                gap: 12px !important;
+                margin-top: 10px;
+            }
+            .day {
+                width: 150px !important;
+                height: 150px !important;
+            }
+            .weekday {
+                width: 150px !important;
+                height: 25px !important;
+            }
+            .controls, .settings {
+                display: none;
+            }
+        }
+        
+        /* Стили для A3 при печати */
+        @page {
+            size: A3 landscape;
+            margin: 10mm;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calendar-container" id="calendarContainer">
+    <h1 class="header" id="calendarHeader">Январь 2026</h1>
+
+    <div class="weekdays" id="weekdays">
+        <div class="weekday">Пн</div>
+        <div class="weekday">Вт</div>
+        <div class="weekday">Ср</div>
+        <div class="weekday">Чт</div>
+        <div class="weekday">Пт</div>
+        <div class="weekday">Сб</div>
+        <div class="weekday">Вс</div>
+    </div>
+
+    <div class="calendar" id="calendar"></div>
+</div>
+
+<div class="settings">
+    <label>
+        Год:
+        <select id="yearSelect">
+            <!-- Годы будут заполнены скриптом -->
+        </select>
+    </label>
+    <label>
+        Месяц:
+        <select id="monthSelect">
+            <option value="0">Январь</option>
+            <option value="1">Февраль</option>
+            <option value="2">Март</option>
+            <option value="3">Апрель</option>
+            <option value="4">Май</option>
+            <option value="5">Июнь</option>
+            <option value="6">Июль</option>
+            <option value="7">Август</option>
+            <option value="8">Сентябрь</option>
+            <option value="9">Октябрь</option>
+            <option value="10">Ноябрь</option>
+            <option value="11">Декабрь</option>
+        </select>
+    </label>
+    <label>
+        Начало недели:
+        <select id="weekStartSelect">
+            <option value="monday">Понедельник</option>
+            <option value="sunday">Воскресенье</option>
+        </select>
+    </label>
+</div>
+
+<div class="controls">
+    <div class="file-input-wrapper">
+        <button onclick="document.getElementById('upload').click()">Выбрать изображения</button>
+        <input type="file" id="upload" accept="image/*" multiple />
+    </div>
+    <div id="selectedFilesInfo" style="font-size: 12px; margin-top: 5px;"></div>
+    
+    <div class="quality-info" id="qualityInfo">
+        <strong>Рекомендация по качеству изображений:</strong><br>
+        Для качественной печати загружайте изображения размером не менее 400×400 пикселей
+    </div>
+    <div class="low-quality-list" id="lowQualityList">
+        <strong>Изображения с низким разрешением:</strong>
+        <ul id="lowQualityFiles"></ul>
+        Рекомендуется заменить эти изображения перед генерацией календаря
+    </div>
+    <button id="generate">Сгенерировать Календарь</button>
+    <button id="saveHtml">Сохранить HTML с картинками</button>
+</div>
+
+<script>
+    const calendarElement = document.getElementById('calendar');
+    const uploadInput = document.getElementById('upload');
+    const generateButton = document.getElementById('generate');
+    const saveHtmlButton = document.getElementById('saveHtml');
+    const calendarContainer = document.getElementById('calendarContainer');
+    const calendarHeader = document.getElementById('calendarHeader');
+    const weekdaysElement = document.getElementById('weekdays');
+    const qualityInfo = document.getElementById('qualityInfo');
+    const lowQualityList = document.getElementById('lowQualityList');
+    const lowQualityFiles = document.getElementById('lowQualityFiles');
+    const selectedFilesInfo = document.getElementById('selectedFilesInfo');
+    const yearSelect = document.getElementById('yearSelect');
+    const monthSelect = document.getElementById('monthSelect');
+    const weekStartSelect = document.getElementById('weekStartSelect');
+
+    let currentFiles = [];
+    let lowQualityImages = [];
+
+    // Инициализация выбора года
+    function initializeYearSelect() {
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear - 5; year <= currentYear + 5; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            if (year === 2026) option.selected = true;
+            yearSelect.appendChild(option);
+        }
+    }
+
+    // Обновление заголовка календаря
+    function updateCalendarHeader() {
+        const monthNames = [
+            'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+            'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+        ];
+        const month = parseInt(monthSelect.value);
+        const year = parseInt(yearSelect.value);
+        calendarHeader.textContent = `${monthNames[month]} ${year}`;
+    }
+
+    // Обновление дней недели в зависимости от выбранного начала недели
+    function updateWeekdays() {
+        const weekStart = weekStartSelect.value;
+        let weekdayNames, weekendIndices;
+        
+        if (weekStart === 'monday') {
+            weekdayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            weekendIndices = [5, 6]; // Суббота и воскресенье
+        } else {
+            weekdayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+            weekendIndices = [0, 6]; // Воскресенье и суббота
+        }
+        
+        weekdaysElement.innerHTML = '';
+        weekdayNames.forEach((dayName, index) => {
+            const dayElement = document.createElement('div');
+            dayElement.classList.add('weekday');
+            if (weekendIndices.includes(index)) {
+                dayElement.classList.add('weekend');
+            }
+            dayElement.textContent = dayName;
+            weekdaysElement.appendChild(dayElement);
+        });
+    }
+
+    // Функция для получения количества дней в месяце
+    function getDaysInMonth(year, month) {
+        return new Date(year, month + 1, 0).getDate();
+    }
+
+    // Функция для получения дня недели первого дня месяца (0-6, где 0 - воскресенье)
+    function getFirstDayOfMonth(year, month) {
+        return new Date(year, month, 1).getDay();
+    }
+
+    // Функция для определения, является ли день выходным
+    function isWeekend(dayIndex, weekStart) {
+        if (weekStart === 'monday') {
+            // Понедельник как первый день недели: суббота (5) и воскресенье (6) - выходные
+            return dayIndex === 5 || dayIndex === 6;
+        } else {
+            // Воскресенье как первый день недели: воскресенье (0) и суббота (6) - выходные
+            return dayIndex === 0 || dayIndex === 6;
+        }
+    }
+
+    // Функция для обновления информации о выбранных файлах
+    function updateSelectedFilesInfo() {
+        if (currentFiles.length === 0) {
+            selectedFilesInfo.textContent = 'Файлы не выбраны';
+            selectedFilesInfo.style.color = '#666';
+        } else {
+            selectedFilesInfo.textContent = `Выбрано файлов: ${currentFiles.length}`;
+            selectedFilesInfo.style.color = '#001f3f';
+        }
+    }
+
+    // Функция для замены конкретного файла
+    function replaceFile(index) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        
+        input.onchange = function(e) {
+            if (e.target.files[0]) {
+                currentFiles[index] = e.target.files[0];
+                updateSelectedFilesInfo();
+                checkImageQuality(currentFiles);
+                
+                // Если календарь уже сгенерирован, обновляем изображение
+                if (calendarElement.children.length > 0) {
+                    updateCalendarImage(index, e.target.files[0]);
+                }
+            }
+        };
+        
+        input.click();
+    }
+
+    // Функция для обновления изображения в календаре
+    function updateCalendarImage(index, file) {
+        const dayElements = calendarElement.querySelectorAll('.day');
+        // Находим день, соответствующий текущему месяцу
+        let currentMonthDayIndex = 0;
+        for (let i = 0; i < dayElements.length; i++) {
+            if (!dayElements[i].querySelector('.prev-month') && 
+                !dayElements[i].querySelector('.next-month')) {
+                if (currentMonthDayIndex === index) {
+                    const img = dayElements[i].querySelector('img');
+                    if (img) {
+                        img.src = URL.createObjectURL(file);
+                    }
+                    break;
+                }
+                currentMonthDayIndex++;
+            }
+        }
+    }
+
+    // Функция для проверки размера изображений
+    function checkImageQuality(files) {
+        lowQualityImages = [];
+        lowQualityFiles.innerHTML = '';
+        lowQualityList.style.display = 'none';
+        
+        let checkedCount = 0;
+        let hasSmallImages = false;
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            
+            img.onload = function() {
+                checkedCount++;
+                
+                if (img.width < 400 || img.height < 400) {
+                    hasSmallImages = true;
+                    lowQualityImages.push({
+                        index: i,
+                        name: file.name,
+                        width: img.width,
+                        height: img.height
+                    });
+                    
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `
+                        ${file.name} (${img.width}×${img.height}px)
+                        <button class="replace-btn" onclick="replaceFile(${i})">Заменить</button>
+                    `;
+                    lowQualityFiles.appendChild(listItem);
+                }
+                
+                if (checkedCount === files.length) {
+                    updateQualityInfo(hasSmallImages);
+                }
+                
+                URL.revokeObjectURL(objectUrl);
+            };
+            
+            img.onerror = function() {
+                checkedCount++;
+                if (checkedCount === files.length) {
+                    updateQualityInfo(hasSmallImages);
+                }
+                URL.revokeObjectURL(objectUrl);
+            };
+            
+            img.src = objectUrl;
+        }
+        
+        // Если файлов нет
+        if (files.length === 0) {
+            updateQualityInfo(false);
+        }
+    }
+    
+    function updateQualityInfo(hasSmallImages) {
+        if (hasSmallImages) {
+            qualityInfo.innerHTML = `
+                <strong>Внимание!</strong><br>
+                Некоторые изображения имеют низкое разрешение.<br>
+                Для качественной печати рекомендуется использовать изображения не менее 400×400 пикселей.
+            `;
+            qualityInfo.style.backgroundColor = '#f8d7da';
+            qualityInfo.style.borderColor = '#f5c6cb';
+            
+            lowQualityList.style.display = 'block';
+        } else if (lowQualityImages.length === 0 && currentFiles.length > 0) {
+            qualityInfo.innerHTML = `
+                <strong>Отлично!</strong><br>
+                Все изображения подходят для качественной печати.
+            `;
+            qualityInfo.style.backgroundColor = '#d1edff';
+            qualityInfo.style.borderColor = '#b6d7ff';
+        } else {
+            qualityInfo.innerHTML = `
+                <strong>Рекомендация по качеству изображений:</strong><br>
+                Для качественной печати загружайте изображения размером не менее 400×400 пикселей
+            `;
+            qualityInfo.style.backgroundColor = '#fff3cd';
+            qualityInfo.style.borderColor = '#ffeaa7';
+        }
+    }
+
+    // Генерация календаря
+    function generateCalendar() {
+        calendarElement.innerHTML = '';
+        const files = currentFiles;
+
+        const year = parseInt(yearSelect.value);
+        const month = parseInt(monthSelect.value);
+        const weekStart = weekStartSelect.value;
+        
+        // Получаем информацию о месяце
+        const daysInMonth = getDaysInMonth(year, month);
+        const firstDayOfMonth = getFirstDayOfMonth(year, month);
+        
+        // Корректируем начало недели в зависимости от выбора пользователя
+        let startDay;
+        if (weekStart === 'monday') {
+            // Понедельник как первый день недели (0 - понедельник, 6 - воскресенье)
+            startDay = (firstDayOfMonth === 0) ? 6 : firstDayOfMonth - 1;
+        } else {
+            // Воскресенье как первый день недели (0 - воскресенье, 6 - суббота)
+            startDay = firstDayOfMonth;
+        }
+        
+        // Количество дней в предыдущем месяце
+        const prevMonthDays = getDaysInMonth(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1);
+
+        // Добавляем даты предыдущего месяца
+        for (let i = 0; i < startDay; i++) {
+            const prevMonthDay = document.createElement('div');
+            prevMonthDay.classList.add('day');
+            
+            const dateNumber = document.createElement('div');
+            dateNumber.classList.add('date-number', 'prev-month');
+            
+            // Проверяем, является ли день выходным в предыдущем месяце
+            const dayOfWeekIndex = i % 7;
+            if (isWeekend(dayOfWeekIndex, weekStart)) {
+                dateNumber.classList.add('weekend-other-month');
+            }
+            
+            dateNumber.textContent = prevMonthDays - (startDay - 1 - i);
+            
+            prevMonthDay.appendChild(dateNumber);
+            calendarElement.appendChild(prevMonthDay);
+        }
+
+        // Генерируем календарь с датами текущего месяца
+        let fileIndex = 0;
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dayElement = document.createElement('div');
+            dayElement.classList.add('day');
+
+            const img = document.createElement('img');
+            if (files[fileIndex]) {
+                img.src = URL.createObjectURL(files[fileIndex]);
+                // Сохраняем пропорции изображения
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '100%';
+                img.style.width = 'auto';
+                img.style.height = 'auto';
+                img.style.objectFit = 'contain';
+                img.crossOrigin = 'anonymous';
+                // Добавляем data-атрибут для имени файла
+                img.setAttribute('data-filename', files[fileIndex].name);
+                fileIndex++;
+            } else {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.style.width = '100%';
+                emptyDiv.style.height = '100%';
+                emptyDiv.style.backgroundColor = '#f9f9f9';
+                dayElement.appendChild(emptyDiv);
+            }
+
+            const dateNumber = document.createElement('div');
+            dateNumber.classList.add('date-number');
+            
+            // Определяем, является ли день выходным
+            const dayOfWeekIndex = (startDay + i - 1) % 7;
+            if (isWeekend(dayOfWeekIndex, weekStart)) {
+                dateNumber.classList.add('weekend');
+            }
+            
+            dateNumber.textContent = i;
+
+            if (files[fileIndex - 1]) {
+                dayElement.appendChild(img);
+            }
+            dayElement.appendChild(dateNumber);
+            calendarElement.appendChild(dayElement);
+        }
+
+        // Вычисляем необходимое количество ячеек (минимум 35, максимум 42)
+        const totalCells = startDay + daysInMonth;
+        const rowsNeeded = Math.ceil(totalCells / 7);
+        const cellsNeeded = rowsNeeded * 7;
+        
+        // Добавляем даты следующего месяца до завершения сетки
+        const nextMonthDaysNeeded = cellsNeeded - totalCells;
+        
+        for (let i = 1; i <= nextMonthDaysNeeded; i++) {
+            const nextMonthDay = document.createElement('div');
+            nextMonthDay.classList.add('day');
+            
+            const dateNumber = document.createElement('div');
+            dateNumber.classList.add('date-number', 'next-month');
+            
+            // Проверяем, является ли день выходным в следующем месяце
+            const dayOfWeekIndex = (startDay + daysInMonth + i - 1) % 7;
+            if (isWeekend(dayOfWeekIndex, weekStart)) {
+                dateNumber.classList.add('weekend-other-month');
+            }
+            
+            dateNumber.textContent = i;
+            
+            nextMonthDay.appendChild(dateNumber);
+            calendarElement.appendChild(nextMonthDay);
+        }
+    }
+
+    // Функция для преобразования изображения в base64
+    function imageToBase64(img) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            ctx.drawImage(img, 0, 0);
+            
+            try {
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                resolve(dataUrl);
+            } catch (error) {
+                console.error('Ошибка преобразования изображения:', error);
+                resolve('');
+            }
+        });
+    }
+
+    // Сохранение HTML
+    saveHtmlButton.addEventListener('click', async () => {
+        if (calendarElement.children.length === 0) {
+            alert('Сначала сгенерируйте календарь!');
+            return;
+        }
+
+        saveHtmlButton.textContent = 'Сохраняем HTML...';
+        saveHtmlButton.disabled = true;
+
+        try {
+            // Клонируем весь контейнер календаря
+            const htmlContainer = calendarContainer.cloneNode(true);
+            
+            // Конвертируем все изображения в base64
+            const images = htmlContainer.querySelectorAll('img');
+            for (let img of images) {
+                try {
+                    // Ждем загрузки изображения
+                    await new Promise((resolve) => {
+                        if (img.complete) {
+                            resolve();
+                        } else {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        }
+                    });
+                    
+                    const base64 = await imageToBase64(img);
+                    if (base64) {
+                        img.src = base64;
+                    }
+                } catch (error) {
+                    console.error('Ошибка преобразования изображения:', error);
+                }
+            }
+
+            // Создаем полный HTML документ
+            const fullHtml = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Календарь ${calendarHeader.textContent}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+            background-color: #fff8dc;
+        }
+        .calendar-container {
+            background-color: #fff8dc;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: fit-content;
+        }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .day {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border: 1px solid #ccc;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+        }
+        .date-number {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 18px;
+            z-index: 1;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .prev-month {
+            color: #999999 !important;
+        }
+        .next-month {
+            color: #999999 !important;
+        }
+        .weekend {
+            color: #ff0000 !important;
+        }
+        .weekend-other-month {
+            color: #ff9999 !important;
+        }
+        .header {
+            font-size: 28px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .weekday {
+            width: 150px;
+            height: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .weekday.weekend {
+            color: #ff0000 !important;
+        }
+        .day img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        * {
+            color: #001f3f;
+        }
+        
+        /* Стили для печати */
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+            }
+            .calendar-container {
+                box-shadow: none;
+                padding: 10px;
+                margin: 0 auto;
+                width: 100% !important;
+                max-width: none;
+                transform: scale(1.4);
+                transform-origin: top center;
+            }
+            .calendar {
+                gap: 12px !important;
+                margin-top: 10px;
+            }
+            .day {
+                width: 150px !important;
+                height: 150px !important;
+            }
+            .weekday {
+                width: 150px !important;
+                height: 25px !important;
+            }
+        }
+        
+        /* Стили для A3 при печати */
+        @page {
+            size: A3 landscape;
+            margin: 10mm;
+        }
+    </style>
+</head>
+<body>
+    ${htmlContainer.outerHTML}
+</body>
+</html>`;
+
+            // Создаем и скачиваем файл
+            const blob = new Blob([fullHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `календарь_${calendarHeader.textContent.replace(' ', '_')}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Ошибка при сохранении HTML:', error);
+            alert('Ошибка при сохранении HTML: ' + error.message);
+        } finally {
+            saveHtmlButton.textContent = 'Сохранить HTML с картинками';
+            saveHtmlButton.disabled = false;
+        }
+    });
+
+    // Обработчики событий
+    uploadInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            currentFiles = Array.from(this.files);
+            updateSelectedFilesInfo();
+            checkImageQuality(currentFiles);
+        } else {
+            updateQualityInfo(false);
+        }
+    });
+
+    generateButton.addEventListener('click', () => {
+        if (lowQualityImages.length > 0) {
+            const confirmGenerate = confirm(
+                `Обнаружено ${lowQualityImages.length} изображений с низким разрешением.\n` +
+                'Рекомендуется заменить их перед генерацией календаря.\n\n' +
+                'Продолжить генерацию календаря?'
+            );
+            
+            if (!confirmGenerate) {
+                return;
+            }
+        }
+        
+        updateCalendarHeader();
+        updateWeekdays();
+        generateCalendar();
+    });
+
+    // Обновление календаря при изменении настроек
+    yearSelect.addEventListener('change', updateCalendarHeader);
+    monthSelect.addEventListener('change', updateCalendarHeader);
+    weekStartSelect.addEventListener('change', function() {
+        updateWeekdays();
+        if (calendarElement.children.length > 0) {
+            generateCalendar();
+        }
+    });
+
+    // Инициализация
+    initializeYearSelect();
+    updateCalendarHeader();
+    updateWeekdays();
+    updateSelectedFilesInfo();
+</script>
+
+</body>
+</html>
