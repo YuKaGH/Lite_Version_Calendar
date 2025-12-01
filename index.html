@@ -233,8 +233,8 @@
         <div class="weekday">Ср</div>
         <div class="weekday">Чт</div>
         <div class="weekday">Пт</div>
-        <div class="weekday">Сб</div>
-        <div class="weekday">Вс</div>
+        <div class="weekday weekend">Сб</div>
+        <div class="weekday weekend">Вс</div>
     </div>
 
     <div class="calendar" id="calendar"></div>
@@ -291,6 +291,7 @@
     </div>
     <button id="generate">Сгенерировать Календарь</button>
     <button id="saveHtml">Сохранить HTML с картинками</button>
+    <button id="generateLatex">Сгенерировать LaTeX код (A3)</button>
 </div>
 
 <script>
@@ -298,6 +299,7 @@
     const uploadInput = document.getElementById('upload');
     const generateButton = document.getElementById('generate');
     const saveHtmlButton = document.getElementById('saveHtml');
+    const generateLatexButton = document.getElementById('generateLatex');
     const calendarContainer = document.getElementById('calendarContainer');
     const calendarHeader = document.getElementById('calendarHeader');
     const weekdaysElement = document.getElementById('weekdays');
@@ -379,6 +381,14 @@
             // Воскресенье как первый день недели: воскресенье (0) и суббота (6) - выходные
             return dayIndex === 0 || dayIndex === 6;
         }
+    }
+
+    // Функция для получения имени файла в формате YYMMDD.jpg
+    function getFileName(year, month, day) {
+        const yearShort = year.toString().slice(-2);
+        const monthStr = (month + 1).toString().padStart(2, '0');
+        const dayStr = day.toString().padStart(2, '0');
+        return `${yearShort}${monthStr}${dayStr}.jpg`;
     }
 
     // Функция для обновления информации о выбранных файлах
@@ -855,6 +865,183 @@
             saveHtmlButton.textContent = 'Сохранить HTML с картинками';
             saveHtmlButton.disabled = false;
         }
+    });
+
+    // Функция для генерации LaTeX кода формата А3 с новым форматом имен файлов
+    generateLatexButton.addEventListener('click', () => {
+        if (calendarElement.children.length === 0) {
+            alert('Сначала сгенерируйте календарь!');
+            return;
+        }
+
+        const year = parseInt(yearSelect.value);
+        const month = parseInt(monthSelect.value);
+        
+        const monthNamesEn = [
+            'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+            'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+        ];
+        
+        const monthNameEn = monthNamesEn[month];
+        const yearShort = year.toString().slice(-2);
+
+        // Создаем LaTeX код с ТОЧНО ТАКИМИ ЖЕ параметрами как в первом файле
+        let latexCode = `\\documentclass{article}
+\\usepackage[a3paper, landscape, left=0.5cm, right=0.5cm, top=1.5cm, bottom=0.5cm]{geometry}
+\\usepackage{amsmath}
+\\usepackage{graphicx}
+\\usepackage{tikz}
+\\usepackage{xcolor}
+\\usepackage{pagecolor}
+\\usepackage{lmodern}
+
+\\begin{document}
+\\pagecolor{yellow!19}
+\\color{blue}
+
+\\thispagestyle{empty}
+
+\\begin{center}
+\\begin{tikzpicture}[remember picture, overlay]
+  \\node[anchor=north west, xshift=2.6cm, yshift=-2cm] at (current page.north west) 
+    {\\fontsize{20}{30}\\selectfont\\bfseries INTERNATIONAL MATHEMATICAL CALENDAR};
+  \\node[anchor=north east, xshift=-3cm, yshift=-2cm] at (current page.north east) 
+    {\\fontsize{50}{70}\\selectfont\\bfseries ${monthNameEn} ${year}};
+\\end{tikzpicture}
+
+\\vspace{2cm}
+
+% Задаем переменные для размеров прямоугольников
+\\newcommand{\\boxwidth}{5.1cm}
+\\newcommand{\\boxheight}{4.5cm}
+
+\\begin{tikzpicture}[x=\\boxwidth, y=\\boxheight]
+  % Определяем слои для правильного порядка отрисовки
+  \\pgfdeclarelayer{background}
+  \\pgfdeclarelayer{foreground}
+  \\pgfsetlayers{background,main,foreground}
+  
+  % Центрируем сетку с учетом промежутков
+  \\pgfmathsetmacro{\\startX}{-0.2}
+  \\pgfmathsetmacro{\\startY}{0.2}
+  \\pgfmathsetmacro{\\hspacing}{1.05}
+  \\pgfmathsetmacro{\\vspacing}{1.05}
+  
+  % Дни недели (верхняя строка) - выровнены по центру
+  \\foreach \\x in {0,...,6} {
+    \\begin{pgfonlayer}{background}
+      \\draw[thick, fill=white!80, rounded corners=2pt] 
+        (\\startX+\\x*\\hspacing, \\startY+1.05) rectangle +(1,0.15);
+    \\end{pgfonlayer}
+  }
+ 
+  % Названия дней недели по центру с увеличенным шрифтом
+  \\node[align=center] at (\\startX+0.5*\\hspacing, \\startY+1.05+0.075) {\\Large\\bfseries Sun};
+  \\node[align=center] at (\\startX+1.5*\\hspacing, \\startY+1.05+0.075) {\\Large\\bfseries Mon};
+  \\node[align=center] at (\\startX+2.5*\\hspacing, \\startY+1.05+0.075) {\\Large\\bfseries Tue};
+  \\node[align=center] at (\\startX+3.5*\\hspacing, \\startY+1.05+0.075) {\\Large\\bfseries Wed};
+  \\node[align=center] at (\\startX+4.5*\\hspacing, \\startY+1.05+0.075) {\\Large\\bfseries Thu};
+  \\node[align=center] at (\\startX+5.5*\\hspacing, \\startY+1.05+0.075) {\\Large\\bfseries Fri};
+  \\node[align=center] at (\\startX+6.5*\\hspacing, \\startY+1.05+0.075) {\\Large\\bfseries Sat};
+`;
+
+        // Получаем все дни календаря
+        const days = calendarElement.querySelectorAll('.day');
+        
+        // Генерируем строки календаря
+        let currentMonthDayCount = 0;
+        for (let row = 0; row < 5; row++) {
+            latexCode += `\n  % ${['Первая', 'Вторая', 'Третья', 'Четвертая', 'Пятая'][row]} строка (7 прямоугольников)\n`;
+            
+            for (let col = 0; col < 7; col++) {
+                const index = row * 7 + col;
+                if (index >= days.length) break;
+                
+                const day = days[index];
+                const dateNumber = day.querySelector('.date-number');
+                const img = day.querySelector('img');
+                
+                // Получаем номер дня
+                const dayNum = parseInt(dateNumber.textContent);
+                
+                // Определяем, является ли день текущего месяца
+                const isCurrentMonth = !dateNumber.classList.contains('prev-month') && 
+                                      !dateNumber.classList.contains('next-month');
+                
+                // Определяем, является ли день выходным
+                const isWeekend = dateNumber.classList.contains('weekend') || 
+                                dateNumber.classList.contains('weekend-other-month');
+                
+                latexCode += `  \\begin{pgfonlayer}{background}\n`;
+                latexCode += `    \\draw[thick, fill=white, rounded corners=2pt] \n`;
+                latexCode += `      (\\startX+${col}*\\hspacing, \\startY-${row}*\\vspacing) rectangle +(1,1);\n`;
+                latexCode += `  \\end{pgfonlayer}\n`;
+                
+                // Добавляем содержимое ячейки (изображение)
+                if (isCurrentMonth && img) {
+                    // Формируем имя файла в формате YYMMDD.jpg
+                    const monthStr = (month + 1).toString().padStart(2, '0');
+                    const dayStr = dayNum.toString().padStart(2, '0');
+                    const filename = `${yearShort}${monthStr}${dayStr}.jpg`;
+                    
+                    // Экранируем подчеркивания в имени файла для LaTeX
+                    const safeFilename = filename.replace(/_/g, '\\_');
+                    latexCode += `  \n`;
+                    latexCode += `  \\node at (\\startX+${col}*\\hspacing+0.5, \\startY-${row}*\\vspacing+0.5) \n`;
+                    latexCode += `    {\\includegraphics[width=4.0cm, height=4.0cm, keepaspectratio]{${safeFilename}}};\n`;
+                }
+                
+                // Добавляем номер дня с правильным цветом
+                latexCode += `  \\begin{pgfonlayer}{foreground}\n`;
+                
+                if (isCurrentMonth) {
+                    if (isWeekend) {
+                        // Выходной день текущего месяца - красный
+                        latexCode += `    \\node[anchor=north east, scale=3.0, fill=none, \n`;
+                        latexCode += `          inner sep=1pt, text=red] \n`;
+                        latexCode += `      at (\\startX+${col}*\\hspacing+0.99, \\startY-${row}*\\vspacing+0.99) {\\textbf{${dayNum}}};\n`;
+                    } else {
+                        // Обычный день текущего месяца - синий (по умолчанию)
+                        latexCode += `    \\node[anchor=north east, scale=3.0, fill=none, \n`;
+                        latexCode += `          inner sep=1pt] \n`;
+                        latexCode += `      at (\\startX+${col}*\\hspacing+0.99, \\startY-${row}*\\vspacing+0.99) {\\textbf{${dayNum}}};\n`;
+                    }
+                } else {
+                    if (isWeekend) {
+                        // Выходной день другого месяца - светло-красный
+                        latexCode += `    \\node[anchor=north east, scale=3.0, fill=none, \n`;
+                        latexCode += `          inner sep=1pt, text=red!60] \n`;
+                        latexCode += `      at (\\startX+${col}*\\hspacing+0.99, \\startY-${row}*\\vspacing+0.99) {${dayNum}};\n`;
+                    } else {
+                        // Обычный день другого месяца - серый
+                        latexCode += `    \\node[anchor=north east, scale=3.0, fill=none, \n`;
+                        latexCode += `          inner sep=1pt, text=gray!60] \n`;
+                        latexCode += `      at (\\startX+${col}*\\hspacing+0.99, \\startY-${row}*\\vspacing+0.99) {${dayNum}};\n`;
+                    }
+                }
+                latexCode += `  \\end{pgfonlayer}\n`;
+                
+                if (col < 6) latexCode += `\n`;
+            }
+            if (row < 4) latexCode += `\n`;
+        }
+
+        latexCode += `\\end{tikzpicture}\n`;
+        latexCode += `\\end{center}\n\n`;
+        latexCode += `\\end{document}`;
+
+        // Создаем и скачиваем LaTeX файл
+        const blob = new Blob([latexCode], { type: 'text/plain; charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mathematical_calendar_${monthNameEn.toLowerCase()}_${year}.tex`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert(`LaTeX файл сгенерирован! Имена изображений: ${yearShort}${(month+1).toString().padStart(2, '0')}01.jpg, ${yearShort}${(month+1).toString().padStart(2, '0')}02.jpg, ..., ${yearShort}${(month+1).toString().padStart(2, '0')}${getDaysInMonth(year, month).toString().padStart(2, '0')}.jpg\n\nПараметры совпадают с исходным файлом:\n- Формат: A3 landscape\n- Поля: left=0.5cm, right=0.5cm, top=1.5cm, bottom=0.5cm\n- Размер ячеек: 5.1cm × 4.5cm\n- Цвет фона: yellow!19`);
     });
 
     // Обработчики событий
